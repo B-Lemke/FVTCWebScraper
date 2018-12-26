@@ -1,6 +1,55 @@
 import requests
+import time
 from bs4 import BeautifulSoup
 
+
+def get_clusters():
+    '''
+    Gets a list of the clusters at FVTC, along with each of the programs in the clusters
+    '''
+
+
+    clustersURl = "https://fvtc.edu/programs/all-programs"
+
+    #make a connection to the page and parse it into a readable format
+    clusterSite = requests.get(clustersURl, headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36'})
+    clusterHtml = BeautifulSoup(clusterSite.text, 'html.parser')
+
+    #If connected to the page, parse out the information
+    while clusterSite.status_code == 200:
+    
+        try: 
+             clusters = clusterHtml.findAll('dd')
+
+             for cluster in clusters:
+                 clusterTitle = "None"
+                 programs = []
+
+                 clusterTitle = cluster.span.text
+                 rawProgramData = cluster.findAll("a", {"class":"programLink"})
+                 for program in rawProgramData:
+                    
+                    #get the URL to the program
+                    programUrl = program['href']
+                    fullProgramUrl = "https://fvtc.edu" + programUrl
+
+                    #get the program info
+                    programInfo = get_program(fullProgramUrl)
+                    programs.append(programInfo)
+
+                    print(programInfo)
+
+                    #wait a second so we don't spam the server
+                    time.sleep(1)
+
+                    
+        except: 
+            pass
+
+       
+        return clutsers
+    
+    
 
 def get_program(programUrl):
     '''
@@ -129,7 +178,6 @@ def get_courses(fullCoursesUrl):
     coursesSite = requests.get(fullCoursesUrl, headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36'})
     coursesHtml = BeautifulSoup(coursesSite.text, 'html.parser')
 
-
     #If connected to the page, parse out the information
     while coursesSite.status_code == 200:
     
@@ -200,6 +248,8 @@ def get_courses(fullCoursesUrl):
 
         course_dict = {'NumberTechnicalCredits' : numberTechnicalCredits, 'TechnicalStudies' : technicalStudies, 'NumberGeneralCredits' : numberGeneralCredits, 'GeneralStudies' : generalStudies, 'NumberElectiveCredits' : numberElectiveCredits, 'SuggestedElectives' : suggestedElectives}
 
+        
+
         return course_dict
 
 
@@ -252,3 +302,6 @@ def extract_course_info(course):
 
 program_dict = get_program("https://fvtc.edu/program/information-technology/software-development-web/10-152-2/it-web-development-and-design-specialist")
 print(program_dict)
+
+
+get_clusters()
