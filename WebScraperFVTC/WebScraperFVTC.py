@@ -18,7 +18,6 @@ def get_program(programUrl):
     textbookCost = 0.00
     programCourses = []
     
-
     #make a connection to the page and parse it into a readable format
     programSite = requests.get(programUrl, headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36'})
     programHtml = BeautifulSoup(programSite.text, 'html.parser')
@@ -91,7 +90,7 @@ def get_program(programUrl):
         try:
             #get the URL to the courses for this program
             coursesUrl = programHtml.find('a', id="dnn_ctr11976_View_hypExplore")['href']
-            fullCourseUrl = "fvtc.edu/" + coursesUrl
+            fullCourseUrl = "https://fvtc.edu" + coursesUrl
 
             #get the program courses
             programCourses = get_courses(fullCourseUrl)
@@ -116,7 +115,6 @@ def get_courses(fullCoursesUrl):
     Going to maybe cause issues with non AAS degrees with the general credits and elective credits
     '''
 
-
     #List of properties
     numberTechnicalCredits = 0
     technicalStudies = []
@@ -130,7 +128,8 @@ def get_courses(fullCoursesUrl):
     #make a connection to the page and parse it into a readable format
     coursesSite = requests.get(fullCoursesUrl, headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36'})
     coursesHtml = BeautifulSoup(coursesSite.text, 'html.parser')
-    
+
+
     #If connected to the page, parse out the information
     while coursesSite.status_code == 200:
     
@@ -142,6 +141,7 @@ def get_courses(fullCoursesUrl):
 
              #clean up the information
              numberTechnicalCredits = numberTechnicalCredits.lower().replace("(","").replace(")","").replace("credits","").strip()
+
         except: 
             pass
 
@@ -161,13 +161,11 @@ def get_courses(fullCoursesUrl):
         except: 
             pass
 
-
-
         ### Get the courses for each type
 
         try: 
              technicalStudiesSection = coursesHtml.find('h3', id="dnn_ctr11979_View_rptCourseGroups_hCourseGroupHeading_0").parent
-             technicalCourses = generalStudiesSection.findAll('dd')
+             technicalCourses = technicalStudiesSection.findAll('dd')
 
              for course in technicalCourses:
                  new_course_dict = extract_course_info(course)
@@ -201,6 +199,7 @@ def get_courses(fullCoursesUrl):
       
 
         course_dict = {'NumberTechnicalCredits' : numberTechnicalCredits, 'TechnicalStudies' : technicalStudies, 'NumberGeneralCredits' : numberGeneralCredits, 'GeneralStudies' : generalStudies, 'NumberElectiveCredits' : numberElectiveCredits, 'SuggestedElectives' : suggestedElectives}
+
         return course_dict
 
 
