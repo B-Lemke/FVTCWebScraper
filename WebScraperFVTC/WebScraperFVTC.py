@@ -1,5 +1,6 @@
 import requests
 import time
+import json
 from bs4 import BeautifulSoup
 
 
@@ -7,7 +8,6 @@ def get_clusters():
     '''
     Gets a list of the clusters at FVTC, along with each of the programs in the clusters
     '''
-
 
     clustersURl = "https://fvtc.edu/programs/all-programs"
 
@@ -26,6 +26,8 @@ def get_clusters():
                  programs = []
 
                  clusterTitle = cluster.span.text
+                 print("Retrieving Cluster " + clusterTitle + "...")
+
                  rawProgramData = cluster.findAll("a", {"class":"programLink"})
                  for program in rawProgramData:
                     
@@ -298,10 +300,9 @@ def extract_course_info(course):
     new_course_dict = {'CourseName':courseName, 'CourseID':courseID, 'CourseNumberOfCredits': courseNumberOfCredits, 'CourseHourEstimate': courseHourEstimate, 'CourseDescription' : courseDescription}
     return new_course_dict
 
+print("Retrieving Program Information!")
+clusters = get_clusters()
 
+with open('clusterInfo.txt', 'w') as f:
+  json.dump(clusters, f, ensure_ascii=False)
 
-program_dict = get_program("https://fvtc.edu/program/information-technology/software-development-web/10-152-2/it-web-development-and-design-specialist")
-print(program_dict)
-
-
-get_clusters()
