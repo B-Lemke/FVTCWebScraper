@@ -10,6 +10,7 @@ def get_clusters():
     '''
 
     clustersURl = "https://fvtc.edu/programs/all-programs"
+    clusterList = []
 
     #make a connection to the page and parse it into a readable format
     clusterSite = requests.get(clustersURl, headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36'})
@@ -26,7 +27,7 @@ def get_clusters():
                  programs = []
 
                  clusterTitle = cluster.span.text
-                 print("Retrieving Cluster " + clusterTitle + "...")
+                 print("\n Retrieving Cluster: " + clusterTitle + "...")
 
                  rawProgramData = cluster.findAll("a", {"class":"programLink"})
                  for program in rawProgramData:
@@ -39,17 +40,21 @@ def get_clusters():
                     programInfo = get_program(fullProgramUrl)
                     programs.append(programInfo)
 
-                    print(programInfo)
+                    print("     " + programInfo.get("ProgramTitle") + " added")
 
+                    cluster_dict = {'ClusterTitle': clusterTitle, 'Programs' : programs}
                     #wait a second so we don't spam the server
                     time.sleep(1)
 
+                 clusterList.append(cluster_dict)
+                 
+                    
                     
         except: 
             pass
 
        
-        return clutsers
+        return clusterList
     
     
 
@@ -176,6 +181,9 @@ def get_courses(fullCoursesUrl):
     numberElectiveCredits = 0
     suggestedElectives = []
 
+    #bool for certificates
+    isCertificate = False
+
     #make a connection to the page and parse it into a readable format
     coursesSite = requests.get(fullCoursesUrl, headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36'})
     coursesHtml = BeautifulSoup(coursesSite.text, 'html.parser')
@@ -187,13 +195,28 @@ def get_courses(fullCoursesUrl):
         ### Get the number of credits needed for each type
 
         try: 
-             numberTechnicalCredits = coursesHtml.find('span', id="dnn_ctr11979_View_rptCourseGroups_lblCourseGroupCredits_0").text
-
-             #clean up the information
-             numberTechnicalCredits = numberTechnicalCredits.lower().replace("(","").replace(")","").replace("credits","").strip()
-
+             #see if there is a section with this id used for technical courses. If not, it is a certificate and needs to be handled differently
+             numberTechnicalCredits = coursesHtml.select_one("#dnn_ctr11979_View_rptCourseGroups_lblCourseGroupCredits_0").text                 
         except: 
             pass
+
+        #If there are courses listed, then we got them already and this is not a certificate
+        if numberTechnicalCredits != 0:
+            #clean up the information
+            numberTechnicalCredits = numberTechnicalCredits.lower().replace("(","").replace(")","").replace("credits","").strip()
+        else:
+            try: 
+              #This is a certificate, and we need to grab a different container
+              numberTechnicalCredits = coursesHtml.find('span', id="dnn_ctr11979_View_lblProgramCredits").text
+              numberTechnicalCredits = numberTechnicalCredits.lower().replace('credits', '').strip()
+
+              isCertificate = True
+
+            except: 
+                pass
+           
+
+
 
         try: 
              numberGeneralCredits = coursesHtml.find('span', id="dnn_ctr11979_View_rptCourseGroups_lblCourseGroupCredits_1").text
@@ -220,7 +243,6 @@ def get_courses(fullCoursesUrl):
              for course in technicalCourses:
                  new_course_dict = extract_course_info(course)
                  technicalStudies.append(new_course_dict)
-
         except: 
             pass
 
@@ -247,6 +269,20 @@ def get_courses(fullCoursesUrl):
         except: 
             pass
       
+
+        ###Exception for certificates
+
+        if isCertificate:
+            try: 
+                 technicalStudiesSection = coursesHtml.find('dl', {"class":"fvtc-mod-posclst-accordion"})
+                 technicalCourses = technicalStudiesSection.findAll('dd')
+
+                 for course in technicalCourses:
+                     new_course_dict = extract_course_info(course)
+                     technicalStudies.append(new_course_dict)
+            except: 
+                pass
+
 
         course_dict = {'NumberTechnicalCredits' : numberTechnicalCredits, 'TechnicalStudies' : technicalStudies, 'NumberGeneralCredits' : numberGeneralCredits, 'GeneralStudies' : generalStudies, 'NumberElectiveCredits' : numberElectiveCredits, 'SuggestedElectives' : suggestedElectives}
 
@@ -301,8 +337,12 @@ def extract_course_info(course):
     return new_course_dict
 
 print("Retrieving Program Information!")
+
+
 clusters = get_clusters()
+
 
 with open('clusterInfo.txt', 'w') as f:
   json.dump(clusters, f, ensure_ascii=False)
 
+print("\n\n JSON written to the file: 'clusterInfo.txt' ")
